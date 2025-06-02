@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QAチャットアプリジェネレーター</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .csv-format {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .csv-format h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .csv-format pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+
+        .chat-container {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .bot-message {
+            background: #f0f0f0;
+            color: #333;
+            margin-right: auto;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .qa-count {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .download-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 QAチャットアプリジェネレーター</h1>
+        
+        <div class="upload-section">
+            <h2>CSVファイルをアップロード</h2>
+            <p>QAデータを含むCSVファイルを選択してチャットアプリを生成します</p>
+            <input type="file" id="csvFile" class="file-input" accept=".csv" />
+            <label for="csvFile" class="upload-btn">📁 CSVファイルを選択</label>
+            <div style="margin-top: 15px;">
+                <button id="demoBtn" class="upload-btn" style="background: linear-gradient(45deg, #28a745, #20c997);">
+                    🎮 サンプルデータでデモ開始
+                </button>
+            </div>
+        </div>
+
+        <div class="csv-format">
+            <h3>📋 CSVファイルの形式</h3>
+            <p>以下の形式でCSVファイルを作成してください：</p>
+            <pre>question,answer
+"こんにちは","こんにちは！何かお手伝いできることはありますか？"
+"営業時間を教えて","営業時間は平日9:00-18:00です。"
+"料金はいくらですか？","基本料金は月額1,000円からです。"</pre>
+            <p><strong>注意：</strong> 1行目はヘッダー行（question,answer）が必要です。</p>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div class="qa-count" id="qaCount"></div>
+
+        <div class="chat-container" id="chatContainer">
+            <h2>💬 チャットアプリ</h2>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" class="chat-input" placeholder="質問を入力してください..." />
+                <button id="sendBtn" class="send-btn">送信</button>
+            </div>
+        </div>
+
+        <div class="download-section" id="downloadSection" style="display: none;">
+            <h3>🌐 チャットアプリをダウンロード</h3>
+            <p>生成されたチャットアプリをHTMLファイルとしてダウンロードできます。</p>
+            <button id="downloadBtn" class="download-btn">💾 HTMLファイルをダウンロード</button>
+        </div>
+    </div>
+
+    <script>
+        let qaDatabase = [];
+        let chatHistory = [];
+
+        // サンプルデータでデモ機能
+        function loadSampleData() {
+            qaDatabase = [
+                { question: "こんにちは", answer: "こんにちは！何かお手伝いできることはありますか？" },
+                { question: "営業時間を教えて", answer: "営業時間は平日9:00-18:00、土日は10:00-17:00です。" },
+                { question: "料金はいくらですか", answer: "基本料金は月額1,000円から、プレミアムプランは3,000円です。" },
+                { question: "予約方法を教えて", answer: "お電話またはWebサイトから24時間予約可能です。" },
+                { question: "場所はどこですか", answer: "東京都渋谷区にございます。最寄り駅は渋谷駅です。" },
+                { question: "キャンセルポリシー", answer: "前日までのキャンセルは無料、当日キャンセルは50%の料金をいただきます。" },
+                { question: "支払い方法", answer: "現金、クレジットカード、電子マネーに対応しています。" },
+                { question: "駐車場はありますか", answer: "専用駐車場を10台分ご用意しております。無料でご利用いただけます。" }
+            ];
+            
+            showStatus(`デモ用のサンプルデータ（${qaDatabase.length}件）を読み込みました！`, 'success');
+            document.getElementById('qaCount').textContent = `📊 登録されたQA数: ${qaDatabase.length}件`;
+            document.getElementById('chatContainer').style.display = 'block';
+            document.getElementById('downloadSection').style.display = 'block';
+            
+            // ウェルカムメッセージ
+            addMessage('こんにちは！サンプルデータでデモをお試しください。「こんにちは」「営業時間」「料金」などと話しかけてみてください！', 'bot');
+        }
+
+        // デモボタンの処理
+        document.getElementById('demoBtn').addEventListener('click', loadSampleData);
+
+        // ファイルアップロード処理
+        document.getElementById('csvFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        if (results.errors.length > 0) {
+                            showStatus('CSVファイルの解析中にエラーが発生しました。', 'error');
+                            return;
+                        }
+
+                        qaDatabase = results.data.filter(row => row.question && row.answer);
+                        
+                        if (qaDatabase.length === 0) {
+                            showStatus('有効なQAデータが見つかりませんでした。CSVの形式を確認してください。', 'error');
+                            return;
+                        }
+
+                        showStatus(`${qaDatabase.length}件のQAデータを読み込みました！`, 'success');
+                        document.getElementById('qaCount').textContent = `📊 登録されたQA数: ${qaDatabase.length}件`;
+                        document.getElementById('chatContainer').style.display = 'block';
+                        document.getElementById('downloadSection').style.display = 'block';
+                        
+                        // ウェルカムメッセージ
+                        addMessage('こんにちは！何かご質問はありますか？', 'bot');
+                    }
+                });
+            }
+        });
+
+        // メッセージ送信処理
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('chatInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message === '') return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            // 質問に対する回答を検索
+            setTimeout(() => {
+                const answer = findAnswer(message);
+                addMessage(answer, 'bot');
+            }, 500);
+        }
+
+        function addMessage(message, type) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = message;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            chatHistory.push({ message, type });
+        }
+
+        function findAnswer(question) {
+            // 完全一致を最初に試す
+            for (let qa of qaDatabase) {
+                if (qa.question.toLowerCase() === question.toLowerCase()) {
+                    return qa.answer;
+                }
+            }
+
+            // 部分一致を試す
+            for (let qa of qaDatabase) {
+                if (qa.question.toLowerCase().includes(question.toLowerCase()) || 
+                    question.toLowerCase().includes(qa.question.toLowerCase())) {
+                    return qa.answer;
+                }
+            }
+
+            // キーワードマッチング
+            const questionWords = question.toLowerCase().split(/\s+/);
+            let bestMatch = null;
+            let bestScore = 0;
+
+            for (let qa of qaDatabase) {
+                const qaWords = qa.question.toLowerCase().split(/\s+/);
+                let score = 0;
+                
+                for (let word of questionWords) {
+                    if (qaWords.some(qaWord => qaWord.includes(word) || word.includes(qaWord))) {
+                        score++;
+                    }
+                }
+
+                if (score > bestScore && score > 0) {
+                    bestScore = score;
+                    bestMatch = qa;
+                }
+            }
+
+            if (bestMatch) {
+                return bestMatch.answer;
+            }
+
+            return 'すみません、その質問についてはお答えできません。他の質問をお試しください。';
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        // HTMLファイルダウンロード機能
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const htmlContent = generateChatAppHTML();
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'qa-chat-app.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        function generateChatAppHTML() {
+            return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QAチャットアプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .bot-message {
+            background: #f0f0f0;
+            color: #333;
+            margin-right: auto;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .qa-info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💬 QAチャットアプリ</h1>
+        <div class="qa-info">登録されたQA数: ${qaDatabase.length}件</div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">こんにちは！何かご質問はありますか？</div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" id="chatInput" class="chat-input" placeholder="質問を入力してください..." />
+            <button id="sendBtn" class="send-btn">送信</button>
+        </div>
+    </div>
+
+    <script>
+        const qaDatabase = ${JSON.stringify(qaDatabase)};
+
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('chatInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message === '') return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            setTimeout(() => {
+                const answer = findAnswer(message);
+                addMessage(answer, 'bot');
+            }, 500);
+        }
+
+        function addMessage(message, type) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = \`message \${type}-message\`;
+            messageDiv.textContent = message;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function findAnswer(question) {
+            for (let qa of qaDatabase) {
+                if (qa.question.toLowerCase() === question.toLowerCase()) {
+                    return qa.answer;
+                }
+            }
+
+            for (let qa of qaDatabase) {
+                if (qa.question.toLowerCase().includes(question.toLowerCase()) || 
+                    question.toLowerCase().includes(qa.question.toLowerCase())) {
+                    return qa.answer;
+                }
+            }
+
+            const questionWords = question.toLowerCase().split(/\\s+/);
+            let bestMatch = null;
+            let bestScore = 0;
+
+            for (let qa of qaDatabase) {
+                const qaWords = qa.question.toLowerCase().split(/\\s+/);
+                let score = 0;
+                
+                for (let word of questionWords) {
+                    if (qaWords.some(qaWord => qaWord.includes(word) || word.includes(qaWord))) {
+                        score++;
+                    }
+                }
+
+                if (score > bestScore && score > 0) {
+                    bestScore = score;
+                    bestMatch = qa;
+                }
+            }
+
+            if (bestMatch) {
+                return bestMatch.answer;
+            }
+
+            return 'すみません、その質問についてはお答えできません。他の質問をお試しください。';
+        }
+    </script>
+</body>
+</html>`;
+        }
+    </script>
+</body>
+</html>
